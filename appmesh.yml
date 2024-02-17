@@ -1,33 +1,167 @@
 Description: "Basic Test Mesh"
+AWSTemplateFormatVersion: 2010-09-09
 Resources:
-  BasicMesh:
-    Type: "AWS::AppMesh::Mesh"
+  AM1:
+    Type: 'AWS::AppMesh::Mesh'
     Properties:
-      MeshName: "BasicMesh1"
+      MeshName: AM1
       Spec:
         EgressFilter:
-          Type: "ALLOW_ALL"
+          Type: DROP_ALL
       Tags:
-      - Key: "Key1"
-        Value: "Value1"
-      - Key: "Key2"
-        Value: "Value2"
+        - Key: MeshKey1
+          Value: MeshValue1
+  AVG1:
+    Type: 'AWS::AppMesh::VirtualGateway'
+    DependsOn : AM1
+    Properties:
+      MeshName: AM1
+      VirtualGatewayName: AVG1
+      Spec:
+        BackendDefaults:
+          ClientPolicy:
+            TLS:
+              Enforce: true
+              Ports: []
+              Certificate:
+                File:
+                  CertificateChain: /the/capathtlscert
+                  PrivateKey: /the/pk
+              Validation:
+                Trust:
+                  File:
+                    CertificateChain: /the/capath
+        Listeners:
+          - PortMapping:
+              Port: 999
+              Protocol: http
+        Logging: {}
+  AVN1:
+    Type: 'AWS::AppMesh::VirtualNode'
+    DependsOn : 
+    - AM1
+    - AVS1
+    Properties:
+      MeshName: AM1
+      VirtualNodeName: AVN1
+      Spec:
+        Backends:
+          - VirtualService:
+              VirtualServiceName: AVS1
+        BackendDefaults:
+          ClientPolicy:
+            TLS:
+              Enforce: true
+              Ports: []
+              Validation:
+                Trust:
+                  File:
+                    CertificateChain: /the/capath
+        Logging: {}
+  AVR1:
+    Type: 'AWS::AppMesh::VirtualRouter'
+    DependsOn : 
+    - AM1
+    Properties:
+      MeshName: AM1
+      VirtualRouterName: AVR1
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 321
+              Protocol: http
+  AVS1:
+    Type: 'AWS::AppMesh::VirtualService'
+    DependsOn : 
+    - AM1
+    - AVR1
+    Properties:
+      MeshName: AM1
+      VirtualServiceName: AVS1
+      Spec:
+        Provider:
+          VirtualRouter:
+            VirtualRouterName: AVR1
+  AGR1:
+    Type: 'AWS::AppMesh::GatewayRoute'
+    DependsOn : 
+    - AM1
+    - AVG1
+    - AVS1
+    Properties:
+      MeshName: AM1
+      VirtualGatewayName: AVG1
+      GatewayRouteName: AGR1
+      Spec:
+        HttpRoute:
+          Match:
+            Prefix: /
+            Method: GET
+            Port: 999
+          Action:
+            Target:
+              VirtualService:
+                VirtualServiceName: AVS1
+              Port: 321
+            Rewrite:
+              Prefix:
+                DefaultPrefix: ENABLED
+              Hostname:
+                DefaultTargetHostname: ENABLED
+  AR1:
+    Type: 'AWS::AppMesh::Route'
+    DependsOn : 
+    - AM1
+    - AVR1
+    - AVN1
+    Properties:
+      MeshName: AM1
+      RouteName: AR1
+      VirtualRouterName: AVR1
+      Spec:
+        Priority: 1
+        HttpRoute:
+          Match:
+            Prefix: /
+          Action:
+            WeightedTargets:
+              - VirtualNode: AVN1
+                Weight: 1
+  ART1:
+    Type: 'AWS::EC2::RouteTable'
+    DependsOn : 
+    - VPC1
+    Properties:
+      VpcId:
+        Ref: VPC1
+      Tags:
+        - Key: stack
+          Value: experiment
+  VPC1:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: stack
+          Value: experiment
 Outputs:
   MeshName:
     Description: Name of the Mesh
     Value:
       Fn::GetAtt:
-      - BasicMesh
+      - AM1
       - MeshName
   Arn:
     Description: Arn of the Mesh created
     Value:
       Fn::GetAtt:
-      - BasicMesh
+      - AM1
       - Arn
   Uid:
     Description: Uid of the Mesh created
     Value:
       Fn::GetAtt:
-      - BasicMesh
+      - AM1
       - Uid
