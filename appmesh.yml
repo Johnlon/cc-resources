@@ -1,0 +1,33 @@
+Description: "Basic Test Mesh"
+Resources:
+  BasicMesh:
+    Type: "AWS::AppMesh::Mesh"
+    Properties:
+      MeshName: "BasicMesh1"
+      Spec:
+        EgressFilter:
+          Type: "ALLOW_ALL"
+      Tags:
+      - Key: "Key1"
+        Value: "Value1"
+      - Key: "Key2"
+        Value: "Value2"
+Outputs:
+  MeshName:
+    Description: Name of the Mesh
+    Value:
+      Fn::GetAtt:
+      - BasicMesh
+      - MeshName
+  Arn:
+    Description: Arn of the Mesh created
+    Value:
+      Fn::GetAtt:
+      - BasicMesh
+      - Arn
+  Uid:
+    Description: Uid of the Mesh created
+    Value:
+      Fn::GetAtt:
+      - BasicMesh
+      - Uid
