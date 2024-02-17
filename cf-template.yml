@@ -1,4 +1,4 @@
-template-file-path: Appmesh.yaml
+template-file-path: appmesh.yaml
 
 # parameters: 
 #     image: public.ecr.aws/lts/nginx:latest
